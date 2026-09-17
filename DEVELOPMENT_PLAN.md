@@ -537,9 +537,9 @@ fire-and-forget 调用。
 
 ### 14.3 GitHub 与 Marketplace 就绪状态
 
-- GitHub 公共账号 `rayzart` 已存在。
-- `rayzart/omast` 当前不存在；未创建 remote、未推送、未发布 Release。
-- GitHub CLI 当前未登录，需要账号持有人执行交互式 `gh auth login`。
+- GitHub 公共账号 `rayzart` 已存在，GitHub CLI 已通过 keyring 登录。
+- 公共仓库 `https://github.com/rayzart/omast` 已创建，`origin` 使用 HTTPS，
+  `main` 已推送 M0 基线；尚未发布 Release。
 - 本机没有 `~/.ssh` 密钥目录；系统 SSH 配置文件的 owner 显示为
   `nobody:nobody`，OpenSSH 会拒绝加载。修复前优先用 GitHub CLI 的 HTTPS
   协议，或由用户明确决定是否修复 SSH 并配置密钥。
@@ -554,5 +554,31 @@ fire-and-forget 调用。
 - 仓库级 author：`rayzart <rayzart@gmail.com>`。
 - 已创建 `.gitignore`、MIT `LICENSE`、`README.md`、`manifest.json` 和最小
   `Omast.qml` 生命周期探针。
-- 未修改 `/usr/share/omarchy/`、`~/.config/omarchy/` 或
-  `~/.config/hypr/`，也未启动任何 Agent 会话。
+- 未修改 `/usr/share/omarchy/` 或 `~/.config/hypr/`。进入 M2 后已通过官方
+  插件命令安装并启用精确的
+  `~/.config/omarchy/plugins/io.github.rayzart.omast/` 测试副本；未启动任何
+  真实 Agent 会话。
+
+### 14.5 MVP 开发进展
+
+已进入 M1/M2 实现阶段并完成以下验证：
+
+- 实现居中原生输入界面、自动聚焦、Enter 提交、Escape 关闭、空输入保护、
+  重复提交保护、失败保留 prompt，以及默认 Agent 设置入口。
+- prompt 命令由纯逻辑模型构造为
+  `["omarchy", "agent", "prompt", prompt]`，QML 源码中不存在 `eval`、
+  `sh -c` 或 `bash -c`。
+- 使用假的终端 launcher 隔离测试了本机真实 `omarchy-agent-prompt`；中文、
+  emoji、单双引号、反引号、分号、管道和 `$()` 均原样成为单个 prompt
+  参数，没有执行。默认 Agent 缺失和 Agent 未安装的错误路径也已验证。
+- 从本地固定 Git 提交安装并启用测试副本；shell IPC summon/hide 成功，
+  Hyprland 检测到唯一的 `omast` layer surface，重复 summon 仍为单实例，
+  toggle 后 layer 数量归零。
+- 完成一次临时截图视觉检查：主题、边框、居中布局和输入焦点正常；截图已
+  从 `/tmp` 删除，未加入仓库。
+- 已创建 README、SECURITY、CHANGELOG、模型测试、smoke 检查和 GitHub
+  Actions workflow。
+
+仍未执行的人工门禁：实际向 Codex 提交 prompt、键盘 Escape/Enter 全链路、
+失败时 UI 文案、另一个 Agent、shell 重启，以及 Hyprland `Super+Space`
+接入。快捷键配置仍保持原样。
