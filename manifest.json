@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.rayzart.omast",
+  "name": "Omast",
+  "version": "0.1.0",
+  "author": "rayzart",
+  "license": "MIT",
+  "description": "Ask AI from Omarchy with your configured default agent.",
+  "kinds": [
+    "menu"
+  ],
+  "entryPoints": {
+    "menu": "Omast.qml"
+  }
+}
