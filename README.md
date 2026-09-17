@@ -1,10 +1,11 @@
 # Omast
 
-**Omast — Ask AI with your default Omarchy agent.**
+**Omast — Launch what you need, then ask AI without leaving the keyboard.**
 
-Omast adds a focused, Omarchy-native prompt surface to your desktop. Type a
-question, press Enter, and Omast hands the prompt to the Agent already selected
-in Omarchy. The answer continues in Omarchy's dedicated Agent terminal.
+Omast adds a focused, Omarchy-native universal launcher to your desktop. Search
+installed applications, launch the selected result with Enter, or press Tab to
+reinterpret the exact same input as a Quick AI prompt. In this first Quick AI
+iteration, the answer continues in Omarchy's dedicated Agent terminal.
 
 Omast is an entry point, not another AI provider: it does not call model APIs,
 store credentials, or duplicate provider-specific CLI options.
@@ -53,12 +54,17 @@ also want a keyboard shortcut for it.
 ## Use
 
 1. Press `Super+Space`.
-2. Type a prompt.
-3. Press Enter to launch the configured Omarchy Agent.
+2. Type to filter installed applications.
+3. Use Up/Down to select a result and Enter to launch it.
+4. At any time, press Tab to enter Quick AI without losing the input, cursor,
+   or selection. Press Shift+Tab to return to the launcher.
+5. In Quick AI, press Enter to hand the prompt to the configured Omarchy Agent.
 
-Escape closes the surface. Blank prompts do nothing. While a prompt is being
+Escape closes the surface from any focused control, and clicking outside the
+card does the same. Blank AI prompts do nothing. While a prompt is being
 submitted, duplicate submission is disabled. If launch fails, the prompt stays
-in the input and Omast displays the launcher error.
+in the input and Omast displays the launcher error. Closing the layer surface
+returns compositor focus to the previously active application.
 
 Use **Choose Agent** to open Omarchy's default Agent menu.
 
@@ -77,6 +83,10 @@ is never evaluated by a shell.
 Agent selection, provider flags, terminal launch, and working-directory policy
 remain owned by Omarchy. Omast deliberately does not embed streamed answers,
 chat history, attachments, screenshots, or project selection in version 0.1.
+
+The plugin uses Omarchy's scoped application-library API for search, labels,
+icons and launch behavior. It stays loaded inside the existing `omarchy-shell`
+process so reopening the launcher does not create another daemon or window.
 
 ## Update
 

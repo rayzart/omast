@@ -6,7 +6,12 @@ All notable changes to Omast will be documented in this file.
 
 ### Added
 
-- Omarchy-native centered prompt surface.
+- Resident Omarchy-native launcher surface backed by the scoped application
+  library, with up to six application results.
+- One universal input for launcher and Quick AI modes, including lossless
+  Tab/Shift+Tab mode switching.
+- Keyboard and pointer application launch, wraparound Up/Down selection,
+  surface-wide Escape dismissal, and outside-click dismissal.
 - Safe argv-based handoff to the configured default Agent.
 - Empty-input guard, duplicate-submit guard, and launch error feedback.
 - Default Agent configuration shortcut.

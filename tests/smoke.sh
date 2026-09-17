@@ -10,7 +10,8 @@ jq -e '
   .schemaVersion == 1 and
   .id == "io.github.rayzart.omast" and
   (.kinds | index("menu")) != null and
-  .entryPoints.menu == "Omast.qml"
+  .entryPoints.menu == "Omast.qml" and
+  .keepLoaded == true
 ' manifest.json >/dev/null
 
 test -f Omast.qml

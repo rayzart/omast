@@ -5,11 +5,12 @@
   "version": "0.1.0",
   "author": "rayzart",
   "license": "MIT",
-  "description": "Ask AI from Omarchy with your configured default agent.",
+  "description": "Launch apps and ask AI from one Omarchy-native surface.",
   "kinds": [
     "menu"
   ],
   "entryPoints": {
     "menu": "Omast.qml"
-  }
+  },
+  "keepLoaded": true
 }

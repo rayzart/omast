@@ -2,6 +2,10 @@
 
 > 本文是新开发窗口的唯一交接入口。开始实现前先完整阅读本文，然后重新检查本机版本与上游文档是否变化。本文记录于 2026-09-17。
 
+> 2026-09-17 追加：`omast_raycast_quickai_interaction_spec.md` 引入新的
+> Raycast-like 分期。原 M0–M5 继续作为 `0.1.0` 发布门禁；新的 Phase 1
+> Launcher 已并入首版，Phase 2 Quick AI 编排见 `RAYCAST_PHASE2_PLAN.md`。
+
 ## 1. 已确认的项目决策
 
 | 项目 | 决策 |
@@ -123,7 +127,9 @@ Hyprland binding
 }
 ```
 
-首版不设置 `keepLoaded`，让菜单按需加载并降低常驻状态复杂度。正式发布的 manifest 不应包含 `omarchy.clonedFrom`。
+Raycast-like Phase 1 将 manifest 设为 `keepLoaded: true`，让同一个浮层与
+通用输入在 shell 会话中复用，并避免隐藏/重开期间销毁进程状态。正式发布的
+manifest 不应包含 `omarchy.clonedFrom`。
 
 ### 4.2 兼容性降级方案
 
@@ -149,7 +155,8 @@ Omarchy `4.0.3-1` 存在已公开的 `omarchy.menu` clone/appLibrary 回归：cl
 - 不执行 `omarchy plugin clone omarchy.menu`。
 - 不替换、禁用或修改 stock `omarchy.menu`。
 - 可以只读参考内建 QML，但不能直接复制整套菜单实现。
-- Omast 自己的 menu 不依赖 `shell.appLibrary`。
+- Omast 不 clone `omarchy.menu`，也不访问其内部实现；Launcher 只使用
+  Omarchy 专门提供给第三方 menu 的 scoped `shell.appLibrary` facade。
 
 ## 5. 计划中的仓库结构
 
@@ -249,26 +256,26 @@ omarchy-shell shell rescanPlugins
 
 ### M1：验证默认 Agent 启动链路
 
-- [ ] 只使用 `omarchy agent prompt` 启动 prompt，不直接调用 `codex`。
+- [x] 只使用 `omarchy agent prompt` 启动 prompt，不直接调用 `codex`。
 - [ ] 验证当前 Codex 默认 Agent 能收到首条 prompt。
-- [ ] 验证 prompt 包含中文、空格、单双引号、反引号、分号和 `$()` 时不会被 shell 二次解释。
-- [ ] 记录 Agent 未设置和 Agent 未安装时 Omarchy 的实际行为。
-- [ ] 确认启动工作目录沿用 Omarchy 的标准策略，不在首版自创 cwd 规则。
+- [x] 验证 prompt 包含中文、空格、单双引号、反引号、分号和 `$()` 时不会被 shell 二次解释。
+- [x] 记录 Agent 未设置和 Agent 未安装时 Omarchy 的实际行为。
+- [x] 确认启动工作目录沿用 Omarchy 的标准策略，不在首版自创 cwd 规则。
 
 完成标准：功能链路正确，且不存在 `eval`、`sh -c` 或字符串拼接执行 prompt。
 
 ### M2：实现 Omast 菜单
 
-- [ ] 实现 `Omast.qml` 所需的 `open()`、`close()`、`toggle()` 生命周期。
-- [ ] 使用 Omarchy 主题/公共 UI 组件，保持原生观感。
-- [ ] 打开时自动聚焦并选中合适的输入状态。
-- [ ] Enter 提交；如支持多行，使用 Shift+Enter 插入换行。
-- [ ] Escape 关闭并清理临时状态。
-- [ ] 空白输入不提交。
-- [ ] 提交后防抖，避免重复启动两个 Agent。
-- [ ] 使用 argv 数组执行：`["omarchy", "agent", "prompt", prompt]`。
-- [ ] 默认 Agent 未配置时展示操作提示，并提供进入 Omarchy 默认 Agent 设置的入口。
-- [ ] 启动成功后关闭输入界面；失败时保留 prompt 并显示错误。
+- [x] 实现 `Omast.qml` 所需的 `open()`、`close()`、`toggle()` 生命周期。
+- [x] 使用 Omarchy 主题/公共 UI 组件，保持原生观感。
+- [x] 打开时自动聚焦并选中合适的输入状态。
+- [x] Enter 提交；首版使用单行输入，不提供 Shift+Enter。
+- [x] Escape 关闭并清理临时状态。
+- [x] 空白输入不提交。
+- [x] 提交后防抖，避免重复启动两个 Agent。
+- [x] 使用 argv 数组执行：`["omarchy", "agent", "prompt", prompt]`。
+- [x] 默认 Agent 未配置时展示操作提示，并提供进入 Omarchy 默认 Agent 设置的入口。
+- [x] 启动成功后关闭输入界面；失败时保留 prompt 并显示错误。
 
 完成标准：可通过 shell IPC 反复打开/关闭，QML 日志无加载错误。
 
@@ -304,21 +311,21 @@ hyprctl configerrors
 
 ### M4：文档与安全收尾
 
-- [ ] README 写清安装、启用、快捷键配置、使用、故障排查和卸载。
-- [ ] 卸载章节先恢复/移除 Hyprland 绑定，再执行插件 remove。
-- [ ] SECURITY.md 说明插件在 `omarchy-shell` 内以用户权限、无沙箱运行。
-- [ ] 明确声明 Omast 不读取凭据、不直接联网、不使用 sudo/pkexec、不运行安装 hook。
-- [ ] 明确声明默认 Agent 可能按 Omarchy 自身策略自动批准工具操作。
-- [ ] 增加 CHANGELOG `0.1.0`。
+- [x] README 写清安装、启用、快捷键配置、使用、故障排查和卸载。
+- [x] 卸载章节先恢复/移除 Hyprland 绑定，再执行插件 remove。
+- [x] SECURITY.md 说明插件在 `omarchy-shell` 内以用户权限、无沙箱运行。
+- [x] 明确声明 Omast 不读取凭据、不直接联网、不使用 sudo/pkexec、不运行安装 hook。
+- [x] 明确声明默认 Agent 可能按 Omarchy 自身策略自动批准工具操作。
+- [x] 增加 CHANGELOG `0.1.0`。
 - [ ] 上架前制作不含隐私信息的 `preview.webp`。
 
 ### M5：发布候选
 
-- [ ] `manifest.json`、README、LICENSE 均在仓库根目录。
-- [ ] `omarchy plugin validate .` 通过。
-- [ ] `qmllint -I "$OMARCHY_PATH/shell" Omast.qml` 通过或仅保留有解释的误报。
+- [x] `manifest.json`、README、LICENSE 均在仓库根目录。
+- [x] `omarchy plugin validate .` 通过。
+- [x] `qmllint -I "$OMARCHY_PATH/shell" Omast.qml` 通过或仅保留有解释的误报。
 - [ ] 从干净 clone 安装、启用、重启 shell、禁用、重新启用、卸载均通过。
-- [ ] 使用公共 GitHub URL 安装测试通过。
+- [x] 使用公共 GitHub URL 安装测试通过。
 - [ ] 创建 `v0.1.0` tag/Release（项目质量要求，非 Marketplace 强制项）。
 - [ ] 用户确认后再提交 Marketplace issue。
 
@@ -457,7 +464,7 @@ Omarchy 插件与长期运行的 `omarchy-shell` 共享进程，以当前用户�
 | 风险 | 应对 |
 |---|---|
 | Omarchy/Quickshell API 变化快 | 以本机版本与最新官方文档双重验证；不复制内部大模块 |
-| `omarchy.menu` clone 回归 | 不 clone、不替换内建菜单；Omast 不依赖 appLibrary |
+| `omarchy.menu` clone 回归 | 不 clone、不替换内建菜单；仅用受支持的 scoped appLibrary facade |
 | 覆盖 `Super+Space` 改变用户习惯 | 明示原绑定，提供恢复说明，不擅自选择冲突快捷键 |
 | Agent CLI 差异 | 只调用 `omarchy agent prompt` |
 | shell 注入 | 始终用 argv 数组传 prompt，增加恶意字符测试 |
@@ -578,7 +585,34 @@ fire-and-forget 调用。
   从 `/tmp` 删除，未加入仓库。
 - 已创建 README、SECURITY、CHANGELOG、模型测试、smoke 检查和 GitHub
   Actions workflow。
+- GitHub Actions `Validate` 首次运行通过；从公共 GitHub URL 安装的测试副本
+  指向验证提交 `80b1f908d87b86acf108c2b193c1eb5f2b6d22bb`。
+- plugin disable/enable 状态切换通过，重新启用后仍可加载唯一 layer surface。
 
 仍未执行的人工门禁：实际向 Codex 提交 prompt、键盘 Escape/Enter 全链路、
-失败时 UI 文案、另一个 Agent、shell 重启，以及 Hyprland `Super+Space`
-接入。快捷键配置仍保持原样。
+失败时 UI 文案、另一个 Agent，以及 Hyprland `Super+Space` 接入。快捷键配置
+仍保持原样。
+
+### 14.6 Raycast-like Phase 1 Launcher
+
+已按上传交互规格完成第一步源码：
+
+- `keepLoaded: true`，单一常驻 `PanelWindow` 与单一通用 `TextField`。
+- 默认 Launcher 模式通过第三方 scoped `shell.appLibrary` 搜索并启动已安装
+  应用；不 clone stock menu，不执行任意搜索字符串。
+- 最多显示六个应用结果和一个 Quick AI action；支持 Up/Down 环绕选择、
+  Enter 启动、鼠标悬停/点击。
+- Tab 进入 Quick AI、Shift+Tab 返回 Launcher；同一输入组件保留完整文本、
+  光标与选区。当前 Quick AI 仍明确降级为安全的 Agent 终端交接。
+- Escape 改为 window-scope，任意焦点都能关闭；Agent 设置入口改为先启动
+  官方设置菜单再隐藏 Omast，消除延迟回调被卸载的竞态。
+- 新增模式归一化、选择移动和输入快照单元测试；完整 smoke 通过。
+- 新版运行时文件已在真实 `omarchy-shell` 热加载，layer surface 创建成功且
+  日志无 Omast QML 加载错误。`keepLoaded` manifest 变更仍需一次完整 shell
+  重启确认；当前桌面会话处于锁定状态，Omarchy 按安全策略拒绝了重启。
+
+Phase 1 剩余人工验收：真实键盘 Tab/Shift+Tab/Up/Down/Enter/Escape、中文
+IME 预编辑、应用实际启动、解锁后的 shell 重启、活动显示器、快速 toggle
+压力测试及 `Super+Space` 接入。Escape 已自动验证能恢复到打开前的同一窗口
+地址。Phase 2 的状态机、AgentBridge/JSONL 门禁、分工与测试策略见
+`RAYCAST_PHASE2_PLAN.md`。
