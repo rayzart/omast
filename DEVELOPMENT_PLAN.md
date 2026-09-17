@@ -585,8 +585,8 @@ fire-and-forget 调用。
   从 `/tmp` 删除，未加入仓库。
 - 已创建 README、SECURITY、CHANGELOG、模型测试、smoke 检查和 GitHub
   Actions workflow。
-- GitHub Actions `Validate` 首次运行通过；从公共 GitHub URL 安装的测试副本
-  指向验证提交 `80b1f908d87b86acf108c2b193c1eb5f2b6d22bb`。
+- GitHub Actions `Validate` 持续通过；已从公共 GitHub URL 重装最新 `main`
+  测试副本，安装 checkout 干净。
 - plugin disable/enable 状态切换通过，重新启用后仍可加载唯一 layer surface。
 
 仍未执行的人工门禁：实际向 Codex 提交 prompt、键盘 Escape/Enter 全链路、
