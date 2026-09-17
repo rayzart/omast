@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+[[ ${OMAST_TEST_MISSING:-0} == 1 ]]
