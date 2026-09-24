@@ -84,9 +84,13 @@ Agent selection, provider flags, terminal launch, and working-directory policy
 remain owned by Omarchy. Omast deliberately does not embed streamed answers,
 chat history, attachments, screenshots, or project selection in version 0.1.
 
-The plugin uses Omarchy's scoped application-library API for search, labels,
-icons and launch behavior. It stays loaded inside the existing `omarchy-shell`
-process so reopening the launcher does not create another daemon or window.
+The plugin prefers Omarchy's scoped application-library API for search, labels,
+icons and launch behavior. On Omarchy builds where that facade is unavailable,
+it falls back to Quickshell's `DesktopEntries` model, applies Omarchy's configured
+and desktop-environment hidden-entry filters, and launches through
+`uwsm-app -- gtk-launch`. All processes use argument arrays; search text is never
+executed as a command. Omast stays loaded inside the existing `omarchy-shell`
+process so reopening it does not create another daemon or window.
 
 ## Update
 

@@ -37,7 +37,7 @@
 
 - 工作区：`/home/rayz/Work/omast`
 - 准备工作开始时工作区仅有本文；现已初始化 Git 并完成 M0 最小插件骨架，详见第 14 节。
-- Omarchy：`4.0.3-1`
+- Omarchy：当前已更新到 `4.0.4-1`；Phase 1 首轮实机验证基于 `4.0.3-1`。
 - 当前默认 Agent：`codex`
 - `Super+Space` 当前打开 Omarchy 根菜单。
 - 当前原生 Agent 快捷键：`Super+Shift+Ctrl+A`。
@@ -156,7 +156,10 @@ Omarchy `4.0.3-1` 存在已公开的 `omarchy.menu` clone/appLibrary 回归：cl
 - 不替换、禁用或修改 stock `omarchy.menu`。
 - 可以只读参考内建 QML，但不能直接复制整套菜单实现。
 - Omast 不 clone `omarchy.menu`，也不访问其内部实现；Launcher 只使用
-  Omarchy 专门提供给第三方 menu 的 scoped `shell.appLibrary` facade。
+  Omarchy 专门提供给第三方 menu 的 scoped `shell.appLibrary` facade。当前
+  `4.0.3-1` 与 `4.0.4-1` 实机中该 facade 均曾为 `null`，因此另有
+  Quickshell `DesktopEntries` 回退；它复用 Omarchy 的隐藏项规则，并通过固定
+  argv 的 `uwsm-app -- gtk-launch` 启动。
 
 ## 5. 计划中的仓库结构
 
@@ -524,7 +527,7 @@ fire-and-forget 调用。
 
 | 项目 | 结果 |
 |---|---|
-| Omarchy | `4.0.3-1` |
+| Omarchy | 首轮 `4.0.3-1`；2026-09-24 复核为 `4.0.4-1` |
 | Hyprland | `0.56.2-2` |
 | Quickshell | `0.3.1-1` |
 | Qt Declarative / qmllint | `6.11.2-1`；可执行文件为 `/usr/lib/qt6/bin/qmllint`，未加入默认 PATH |
@@ -538,9 +541,9 @@ fire-and-forget 调用。
 | 插件 validator | `jq empty`、`omarchy plugin validate .` 均通过 |
 | QML lint | `/usr/lib/qt6/bin/qmllint -I "$OMARCHY_PATH/shell" Omast.qml` 通过 |
 
-当前自动化会话无法连接图形桌面的 Hyprland/Quickshell socket，且不能写
-`~/.cache`，所以 `hyprctl configerrors`、插件 rescan/enable/toggle 和真实 UI
-验收必须在桌面会话中执行。这不影响静态开发，但仍是 M2/M3 的发布门禁。
+早期自动化会话无法连接图形桌面的 Hyprland/Quickshell socket。2026-09-24
+恢复桌面会话后，已完成 shell 重启、IPC 状态查询、真实键盘模式切换与 Escape
+焦点恢复验证；仍未接管 `Super+Space`，因此 M3 保持为独立的用户确认门禁。
 
 ### 14.3 GitHub 与 Marketplace 就绪状态
 
@@ -598,8 +601,10 @@ fire-and-forget 调用。
 已按上传交互规格完成第一步源码：
 
 - `keepLoaded: true`，单一常驻 `PanelWindow` 与单一通用 `TextField`。
-- 默认 Launcher 模式通过第三方 scoped `shell.appLibrary` 搜索并启动已安装
-  应用；不 clone stock menu，不执行任意搜索字符串。
+- 默认 Launcher 模式优先通过第三方 scoped `shell.appLibrary` 搜索并启动已安装
+  应用；实机注入的 facade 为 `null` 时，自动回退到 Quickshell
+  `DesktopEntries`、Omarchy 隐藏项规则与固定 argv 的 `uwsm-app -- gtk-launch`。
+  两条路径都不 clone stock menu，也不执行任意搜索字符串。
 - 最多显示六个应用结果和一个 Quick AI action；支持 Up/Down 环绕选择、
   Enter 启动、鼠标悬停/点击。
 - Tab 进入 Quick AI、Shift+Tab 返回 Launcher；同一输入组件保留完整文本、
@@ -607,12 +612,33 @@ fire-and-forget 调用。
 - Escape 改为 window-scope，任意焦点都能关闭；Agent 设置入口改为先启动
   官方设置菜单再隐藏 Omast，消除延迟回调被卸载的竞态。
 - 新增模式归一化、选择移动和输入快照单元测试；完整 smoke 通过。
-- 新版运行时文件已在真实 `omarchy-shell` 热加载，layer surface 创建成功且
-  日志无 Omast QML 加载错误。`keepLoaded` manifest 变更仍需一次完整 shell
-  重启确认；当前桌面会话处于锁定状态，Omarchy 按安全策略拒绝了重启。
+- Phase 1 首版在真实 `omarchy-shell` 热加载并完成过完整 shell 重启；当时状态
+  IPC 确认 `keepLoaded` 实例可用、fallback 读取到 63 个 desktop entries，空
+  查询显示六个应用和一个 Quick AI action，日志无 Omast QML 加载错误。
+- 真实键盘输入 `fire` 后结果收敛到两个；Tab/Shift+Tab 往返时输入长度保持为
+  4，Escape 关闭浮层并将焦点恢复到打开前的同一窗口地址。
+- 2026-09-24 在 Omarchy `4.0.4-1` 再次检查：原常驻实例读取到 65 个 desktop
+  entries，`appLibraryAvailable=false`，确认兼容路径仍是实际需要。代码复核随后
+  补齐 `launcher.hides`、`Hidden`/`OnlyShowIn`/`NotShowIn` 过滤，并改用固定 argv
+  的 `uwsm-app -- gtk-launch`。该修正版已同步到用户插件目录，但常驻实例没有被
+  hot reload 替换；完整 shell 重启因会话锁定被 Omarchy 安全门禁拒绝。
 
-Phase 1 剩余人工验收：真实键盘 Tab/Shift+Tab/Up/Down/Enter/Escape、中文
-IME 预编辑、应用实际启动、解锁后的 shell 重启、活动显示器、快速 toggle
-压力测试及 `Super+Space` 接入。Escape 已自动验证能恢复到打开前的同一窗口
-地址。Phase 2 的状态机、AgentBridge/JSONL 门禁、分工与测试策略见
+Phase 1 剩余人工验收：中文 IME 预编辑、应用实际启动、活动显示器，以及
+`Super+Space` 接入；解锁后还需完整重启 shell，复验最新隐藏规则修正版。实际
+应用和 Agent 提交仍保留给人工确认，避免自动测试主动打开程序或启动具备工具
+权限的 Agent。Phase 2 的状态机、AgentBridge/JSONL 门禁、分工与测试策略见
 `RAYCAST_PHASE2_PLAN.md`。
+
+### 14.7 Phase 2 P2.1a 协议接缝
+
+已在不改变 Phase 1 可见行为的前提下启动第二步：
+
+- 新增纯 JavaScript generation reducer，覆盖 `IDLE`、`STARTING`、
+  `STREAMING`、`CANCELING`、`COMPLETE` 与 `ERROR`。
+- 每次请求/重试使用新的单调递增 `requestId`，并同时检查
+  `openGeneration`，旧窗口或旧 attempt 的迟到事件会被忽略。
+- 请求内容被 JSON 克隆并深度冻结；重试复用内容快照而不复用 attempt ID。
+- 新增 decoded-chunk JSONL parser/validator 与确定性 fixtures，覆盖中文、emoji、
+  CRLF、半行缓存、错误行后恢复、取消、重试和 malformed event。
+- production 路径仍只调用 `omarchy agent prompt`；尚未提供的 structured stream
+  不会被伪装成现有能力。下一切片是测试专用 FakeBridge，不接真实模型或 UI。

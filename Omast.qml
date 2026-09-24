@@ -27,10 +27,17 @@ Item {
   property int launchGeneration: 0
   property int launchExitCode: -1
   property var preservedInput: ({})
+  property var fallbackConfiguredHiddenIds: ({})
+  property var fallbackDesktopHiddenIds: ({})
+  property bool fallbackConfigLoaded: false
+  property bool fallbackScanCompleted: false
+  property bool fallbackScanPending: false
 
   readonly property string pluginId: (root.manifest && root.manifest.id)
     ? String(root.manifest.id) : "io.github.rayzart.omast"
   readonly property var appLibrary: root.shell ? root.shell.appLibrary : null
+  readonly property bool fallbackReady: root.fallbackConfigLoaded
+    && root.fallbackScanCompleted
   readonly property bool quickAI: root.interactionMode === "quick_ai"
   readonly property bool busy: root.submitting || launchProc.running
   readonly property color background: Color.menu.background
@@ -69,6 +76,7 @@ Item {
       root.interactionMode = OmastModel.normalizeMode(payload.mode)
       universalInput.text = typeof payload.prompt === "string" ? payload.prompt : ""
       if (root.appLibrary) root.appLibrary.refreshIcons()
+      else root.startFallbackHiddenEntryScan()
       root.refreshLauncherResults()
     }
 
@@ -109,6 +117,12 @@ Item {
       inputLength: universalInput.text.length,
       selectedIndex: root.selectedIndex,
       resultCount: launcherResults.count,
+      shellAvailable: root.shell !== null,
+      appLibraryAvailable: root.appLibrary !== null,
+      fallbackReady: root.fallbackReady,
+      rawAppCount: root.appLibrary
+        ? root.appLibrary.sortedEntries("").length
+        : (DesktopEntries.applications.values || []).length,
       busy: root.busy
     })
   }
@@ -119,6 +133,25 @@ Item {
       universalInput.cursorPosition,
       universalInput.selectionStart,
       universalInput.selectionEnd)
+  }
+
+  function startFallbackHiddenEntryScan() {
+    if (root.appLibrary || !root.omarchyPath) return
+    if (fallbackHiddenEntryScan.running) {
+      root.fallbackScanPending = true
+      return
+    }
+    var desktops = [
+      Quickshell.env("XDG_CURRENT_DESKTOP"),
+      Quickshell.env("XDG_SESSION_DESKTOP"),
+      Quickshell.env("DESKTOP_SESSION")
+    ].filter(function(value) { return String(value || "").length > 0 }).join(":")
+    root.fallbackScanPending = false
+    root.fallbackScanCompleted = false
+    fallbackHiddenEntryScan.command = [
+      root.omarchyPath + "/shell/services/hidden-entries.sh", desktops
+    ]
+    fallbackHiddenEntryScan.running = true
   }
 
   function restoreInput(snapshot) {
@@ -146,8 +179,14 @@ Item {
     if (root.interactionMode !== "launcher") return
 
     launcherResults.clear()
-    if (root.appLibrary) {
-      var rows = root.appLibrary.sortedEntries(universalInput.text)
+    var rows = root.appLibrary
+      ? root.appLibrary.sortedEntries(universalInput.text)
+      : (root.fallbackReady
+        ? OmastModel.fallbackAppEntries(
+            DesktopEntries.applications.values || [], universalInput.text, 6,
+            root.fallbackConfiguredHiddenIds, root.fallbackDesktopHiddenIds)
+        : [])
+    if (rows.length > 0) {
       var appCount = Math.min(6, rows.length)
       for (var index = 0; index < appCount; index++) {
         var entry = rows[index].entry
@@ -156,8 +195,11 @@ Item {
         launcherResults.append({
           kind: "app",
           desktopId: desktopId,
-          name: String(root.appLibrary.entryName(entry) || desktopId),
-          subtext: String(root.appLibrary.entrySubtext(entry) || "Application"),
+          name: String(root.appLibrary
+            ? root.appLibrary.entryName(entry) : (entry.name || desktopId)),
+          subtext: String(root.appLibrary
+            ? root.appLibrary.entrySubtext(entry)
+            : (entry.genericName || "Application")),
           iconName: String(entry.icon || "")
         })
       }
@@ -191,8 +233,11 @@ Item {
 
     if (root.appLibrary) {
       root.appLibrary.launch(result.desktopId, result.name)
-      root.dismiss()
+    } else {
+      var command = OmastModel.desktopLaunchCommand(result.desktopId)
+      if (command.length > 0) Quickshell.execDetached(command)
     }
+    root.dismiss()
   }
 
   function submitQuickAI() {
@@ -230,6 +275,67 @@ Item {
     function onAppsChanged() {
       if (root.opened) root.refreshLauncherResults()
     }
+  }
+
+  Connections {
+    target: DesktopEntries.applications
+    function onValuesChanged() {
+      if (!root.appLibrary) {
+        root.fallbackScanPending = true
+        fallbackHiddenEntryDebounce.restart()
+      }
+    }
+  }
+
+  onFallbackReadyChanged: if (root.opened && !root.appLibrary)
+    root.refreshLauncherResults()
+
+  Component.onCompleted: root.startFallbackHiddenEntryScan()
+
+  FileView {
+    path: root.omarchyPath + "/default/omarchy/launcher.hides"
+    watchChanges: true
+    printErrors: false
+    onLoaded: {
+      root.fallbackConfiguredHiddenIds = OmastModel.hiddenEntryIds(text())
+      root.fallbackConfigLoaded = true
+    }
+    onFileChanged: {
+      root.fallbackConfiguredHiddenIds = OmastModel.hiddenEntryIds(text())
+      root.fallbackConfigLoaded = true
+      if (root.opened && !root.appLibrary) root.refreshLauncherResults()
+    }
+    onLoadFailed: {
+      root.fallbackConfiguredHiddenIds = ({})
+      root.fallbackConfigLoaded = false
+    }
+  }
+
+  QtObject {
+    id: fallbackHiddenEntryOutput
+    property string text: ""
+  }
+
+  Process {
+    id: fallbackHiddenEntryScan
+    stdout: SplitParser {
+      onRead: function(line) { fallbackHiddenEntryOutput.text += line + "\n" }
+    }
+    onStarted: fallbackHiddenEntryOutput.text = ""
+    onExited: function(exitCode) {
+      if (exitCode === 0) {
+        root.fallbackDesktopHiddenIds = OmastModel.hiddenEntryIds(
+          fallbackHiddenEntryOutput.text)
+        root.fallbackScanCompleted = true
+      }
+      if (root.fallbackScanPending) fallbackHiddenEntryDebounce.restart()
+    }
+  }
+
+  Timer {
+    id: fallbackHiddenEntryDebounce
+    interval: 750
+    onTriggered: root.startFallbackHiddenEntryScan()
   }
 
   Process {
@@ -421,8 +527,10 @@ Item {
               fillMode: Image.PreserveAspectFit
               sourceSize.width: width * Screen.devicePixelRatio
               sourceSize.height: height * Screen.devicePixelRatio
-              source: visible && root.appLibrary
-                ? root.appLibrary.iconSource(resultRow.iconName) : ""
+              source: !visible ? ""
+                : (root.appLibrary
+                  ? root.appLibrary.iconSource(resultRow.iconName)
+                  : Quickshell.iconPath(resultRow.iconName || "application-x-executable", true))
               asynchronous: true
               anchors.left: parent.left
               anchors.leftMargin: Style.spacing.md

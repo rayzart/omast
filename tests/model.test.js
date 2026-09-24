@@ -30,6 +30,42 @@ assert.deepEqual(model.inputSnapshot("abc", 99, -2, 2), {
   selectionEnd: 2
 })
 
+const appEntries = [
+  { id: "org.mozilla.firefox", name: "Firefox", genericName: "Web Browser", keywords: ["web"] },
+  { id: "com.visualstudio.code", name: "Visual Studio Code", genericName: "Code Editor", keywords: ["development"] },
+  { id: "hidden.app", name: "Hidden", noDisplay: true },
+  { id: "org.example.terminal", name: "Terminal", comment: "Command line shell" }
+]
+assert.deepEqual(
+  model.hiddenEntryIds("hidden.desktop\norg.example.tool\n\n"),
+  { hidden: true, "org.example.tool": true }
+)
+assert.deepEqual(
+  model.fallbackAppEntries(appEntries, "fire", 6).map(row => row.entry.id),
+  ["org.mozilla.firefox"]
+)
+assert.deepEqual(
+  model.fallbackAppEntries(appEntries, "code editor", 6).map(row => row.entry.id),
+  ["com.visualstudio.code"]
+)
+assert.deepEqual(
+  model.fallbackAppEntries(appEntries, "", 2).map(row => row.entry.id),
+  ["org.mozilla.firefox", "org.example.terminal"]
+)
+assert.deepEqual(
+  model.fallbackAppEntries(
+    appEntries, "", 6,
+    { "org.mozilla.firefox": true },
+    { "org.example.terminal": true }
+  ).map(row => row.entry.id),
+  ["com.visualstudio.code"]
+)
+assert.deepEqual(
+  model.desktopLaunchCommand("org.telegram.desktop"),
+  ["uwsm-app", "--", "gtk-launch", "org.telegram.desktop.desktop"]
+)
+assert.deepEqual(model.desktopLaunchCommand(""), [])
+
 const hostilePrompt = "中文 'single' \"double\" `backtick`; | $(touch /tmp/omast-pwned) 💡"
 const command = model.agentCommand(hostilePrompt)
 assert.deepEqual(command, ["omarchy", "agent", "prompt", hostilePrompt])

@@ -16,6 +16,11 @@ Omast itself:
 - passes prompts as a process argument array, without `eval`, `sh -c`, or
   command-string interpolation.
 
+When Omarchy's scoped application library is unavailable, Omast runs Omarchy's
+installed `hidden-entries.sh` directly as an argument array to preserve launcher
+visibility rules, and launches selected desktop IDs through the fixed
+`uwsm-app -- gtk-launch` argv path. User search text is passed to neither process.
+
 Omast delegates to `omarchy agent prompt`. Omarchy may launch the selected
 Agent with auto-approval, yolo, allow-all, or similar unattended options. The
 Agent may therefore run commands, use tools, and modify files according to its

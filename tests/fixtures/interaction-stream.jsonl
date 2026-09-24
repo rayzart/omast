@@ -1,0 +1,9 @@
+{"type":"ready","protocolVersion":1}
+{"type":"capabilities","capabilities":{"streaming":true,"followUp":true,"cancel":true}}
+{"type":"request.started","openGeneration":7,"requestId":1}
+{"type":"session.started","openGeneration":7,"requestId":1,"sessionId":"session-a"}
+{"type":"message.started","openGeneration":7,"requestId":1,"sessionId":"session-a","messageId":"message-a"}
+{"type":"message.delta","openGeneration":7,"requestId":1,"sessionId":"session-a","messageId":"message-a","seq":0,"delta":"你好，"}
+{"type":"message.delta","openGeneration":7,"requestId":1,"sessionId":"session-a","messageId":"message-a","seq":1,"delta":"Omast 💡"}
+{"type":"message.completed","openGeneration":7,"requestId":1,"sessionId":"session-a","messageId":"message-a","text":"你好，Omast 💡"}
+{"type":"request.done","openGeneration":7,"requestId":1,"sessionId":"session-a"}

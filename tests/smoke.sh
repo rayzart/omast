@@ -29,6 +29,7 @@ if rg -n '(^|[^A-Za-z])(eval|sh -c|bash -c)([^A-Za-z]|$)' Omast.qml OmastModel.j
 fi
 
 node tests/model.test.js
+node tests/interaction-reducer.test.js
 tests/upstream-agent.test.sh
 
 if command -v omarchy >/dev/null 2>&1; then

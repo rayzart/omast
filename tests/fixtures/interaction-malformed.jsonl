@@ -1,0 +1,3 @@
+{"type":"message.delta","openGeneration":7,"requestId":1,"messageId":"message-a","seq":"wrong","delta":"ignored"}
+not-json
+{"type":"request.error","openGeneration":7,"requestId":1,"code":"provider_failure","userMessage":"Backend failed."}

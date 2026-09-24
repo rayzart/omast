@@ -20,16 +20,47 @@ Launcher
 The terminal launcher remains a truthful fallback. It must not be presented as
 embedded streaming.
 
+## Verified environment snapshot
+
+As of 2026-09-24, the installed packages are Omarchy `4.0.4-1`, Quickshell
+`0.3.1-1`, and Qt Declarative `6.11.2-1`. The earlier Phase 1 desktop run was
+performed on Omarchy `4.0.3-1`; on that machine the plugin was injected with a
+shell facade but `shell.appLibrary` was observed as `null` at runtime.
+
+The packaged `4.0.4-1` shell source still constructs a scoped application
+library facade for every manifest with the `menu` kind. Live injection must be
+reverified after the updated plugin is installed and the desktop shell restarts;
+the plan therefore preserves both application-provider paths.
+
+The current worktree implements this provider order:
+
+1. Prefer scoped `shell.appLibrary` for filtering, fuzzy ordering, icon
+   fallback/refresh, launch feedback, and Omarchy's `uwsm-app` launch policy.
+2. If that facade is absent, use Quickshell `DesktopEntries.applications` for
+   discovery, apply Omarchy's configured and desktop-environment hidden-entry
+   filters, and launch with a fixed `uwsm-app -- gtk-launch` argument array.
+
+The fallback preserves visibility rules and UWSM launch scoping, and launcher
+text is never evaluated as a command. It is still not behaviorally identical to
+`shell.appLibrary`: it lacks the host's icon index/refresh and launch OSD, and
+uses a simpler ranking algorithm. Those parity gaps remain documented and
+tested rather than hidden behind a generic "application library" claim.
+
 ## Current capability boundary
 
-Available now:
+Implemented now:
 
 - one shell-hosted `PanelWindow` and compositor IPC toggle;
-- scoped `shell.appLibrary` app search and launch;
-- a universal QML input and keyboard state machine;
+- application search and launch through scoped `shell.appLibrary` when
+  available, with the explicit `DesktopEntries` fallback above;
+- one resident universal QML input with Launcher/Quick AI mode switching;
 - safe argv handoff through `omarchy agent prompt`;
+- request-generation protection around the current terminal handoff.
+
+Available platform primitives, but not yet a Phase 2 implementation:
+
 - `Process` stdin/stdout/stderr and lifecycle primitives;
-- fake streaming events for UI and reducer development.
+- deterministic fake streaming events for UI and reducer development.
 
 Not available from Omarchy today:
 
@@ -60,8 +91,9 @@ Critical invariants:
 1. `universalText` has one owner and is never copied during mode changes.
 2. Tab/Shift+Tab preserve text, cursor position, selection, and IME state where
    Qt exposes it safely.
-3. Every backend event carries `requestId` and `sessionId`; stale events from a
-   prior open generation are ignored.
+3. Every request attempt gets a new `requestId`. Every applicable backend event
+   carries that ID, plus `sessionId` once one exists; stale events from a prior
+   request or open generation are ignored.
 4. Prompt, context, and attachments are frozen into a request snapshot before
    generation starts.
 5. Failure, cancellation, and retry never discard the prompt or conversation.
@@ -73,7 +105,9 @@ Hyprland binding
   → omarchy-shell toggle
   → Omast.qml
       → InteractionReducer.js
-      → LauncherProvider (scoped appLibrary)
+      → LauncherProvider
+          ├─ ScopedAppLibraryProvider (preferred)
+          └─ DesktopEntriesProvider (compatibility fallback)
       → UniversalInput
       → QuickAISessionStore
       → AgentBridge
@@ -95,15 +129,23 @@ capabilities()
 start(request)
 sendFollowUp(sessionId, request)
 cancel(requestId)
-retry(requestId)
 handoff(sessionId)
 ```
+
+Retry is a controller operation, not `retry(requestId)`: it reuses the frozen
+request snapshot but calls `start()` or `sendFollowUp()` with a new
+`requestId`. Reusing the failed attempt's ID would make late events from that
+attempt indistinguishable from the retry.
 
 Suggested future transport:
 
 ```text
 omarchy agent stream --protocol jsonl-v1
 ```
+
+This command is an illustrative protocol endpoint only. It does not exist in
+the verified Omarchy release and must not be invoked or advertised as a current
+feature.
 
 Minimum request fields:
 
@@ -129,7 +171,7 @@ need `messageId` and monotonic `seq`. Errors use stable codes such as
 
 ## Work packages
 
-### P2.0 — Protocol decision (blocking)
+### P2.0 — Protocol decision (blocks P2.4 and P2.5)
 
 Owner: project maintainer + Omarchy backend owner.
 
@@ -145,11 +187,17 @@ Exit: protocol fixtures and error codes are approved.
 
 Owner: logic/testing subagent.
 
+P2.1a reducer/protocol seam is implemented in `InteractionReducer.js` with
+deterministic Node fixtures. It is deliberately not wired to the production UI.
+
 - Implement the orthogonal state reducer.
 - Implement request/session IDs and open-generation stale-event guards.
 - Add fake JSONL parser and deterministic event fixtures.
-- Cover UTF-8 split boundaries, malformed events, stderr, non-zero exit,
-  cancellation races, retry, and late events.
+- Cover JSON lines split across decoded chunks, malformed events, stderr,
+  non-zero exit, cancellation races, retry with a fresh request ID, and late
+  events. Verify raw UTF-8 byte splitting separately with an integration
+  fixture around Quickshell's process parser; JavaScript strings alone cannot
+  model an incomplete multibyte sequence.
 
 Exit: the entire Quick AI state machine passes without a real model.
 
@@ -162,6 +210,10 @@ Owner: Cursor primary implementation track.
 - Implement first-Escape cancel / second-Escape close.
 - Keep the composer visible while the response area scrolls.
 - Add copy response and open-in-full-chat affordances behind capabilities.
+- Keep the existing single-line universal input for the first slice. Decide on
+  a multiline Quick AI composer before claiming the specification's
+  Shift+Enter newline behavior; do not silently replace the launcher input
+  component during Launcher → Quick AI transition.
 
 Exit: fake streaming is keyboard-complete and visually stable.
 
@@ -184,6 +236,8 @@ Owner: Cursor primary implementation track after P2.0.
 - Feed request JSON through stdin; parse JSONL incrementally.
 - Implement capability-driven cancel, retry, follow-up, and errors.
 - Fall back to `TerminalHandoffBridge` when streaming is unavailable.
+- Assign a fresh request ID to every retry while retaining the same immutable
+  snapshot and, where supported, backend session.
 
 Exit: supported Agents pass the protocol conformance suite.
 
@@ -211,13 +265,21 @@ Exit: no context is silently captured or injected.
 
 ## QA gates
 
+- Exercise both application-provider paths. The preferred facade must retain
+  Omarchy hidden-entry filtering, icon refresh, launch feedback, and launch
+  scoping; the fallback must apply configured and desktop-environment hides,
+  preserve UWSM launch scoping, never execute query text, and disclose its
+  remaining icon/feedback/ranking gaps.
+- After restarting the desktop shell, record `appLibraryAvailable` on Omarchy
+  `4.0.4-1`; do not infer it from packaged source alone.
 - Tab/Shift+Tab preserve exact text, cursor, selection, Chinese IME pre-edit,
   and do not recreate the window.
 - Twenty rapid toggles produce at most one `omast` layer.
 - Up/Down/Enter/Escape/Ctrl+K/Ctrl+L/Ctrl+J work without a mouse.
 - First Escape during generation cancels; a later Escape closes.
 - Late deltas/errors after close, retry, or a new request are ignored.
-- UTF-8 chunks split inside Chinese characters and emoji reassemble correctly.
+- An integration fixture that splits UTF-8 bytes inside Chinese characters and
+  emoji reassembles them correctly before JSON event handling.
 - Errors retain prompt, context, and previous messages.
 - Active-monitor placement and previous-window focus restoration are verified
   under Wayland.
@@ -233,3 +295,22 @@ events into the floating surface, follow-up preserves the same backend session,
 cancel/retry are race-safe, and all unsupported Agents visibly fall back to the
 terminal handoff. A styled fake stream or parsed terminal output does not meet
 this definition.
+
+## Completed minimum implementation slice
+
+P2.1a is implemented without changing the visible Phase 1 behavior:
+
+1. Extract a pure generation reducer with `IDLE`, `STARTING`, `STREAMING`,
+   `CANCELING`, `COMPLETE`, and `ERROR` transitions.
+2. Add monotonic request IDs, open-generation guards, and immutable request
+   snapshots; prove that retry uses a fresh ID and late events are ignored.
+3. Add a line-level JSON event validator plus deterministic fake fixtures for
+   start, delta, completion, error, cancellation, and malformed input.
+4. Keep `omarchy agent prompt` as the only production bridge and leave the
+   response UI disabled until the fake bridge can drive it in tests.
+
+This slice establishes the protocol seam and race guarantees without implying
+that Omarchy already supports embedded streaming. The next minimum slice is
+P2.1b: a test-only `FakeBridge` that maps capability handshake, decoded chunks,
+transport exit, and cancellation into reducer events. Production remains on
+`omarchy agent prompt` until P2.0 defines a real structured backend.
