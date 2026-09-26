@@ -30,6 +30,7 @@ fi
 
 node tests/model.test.js
 node tests/interaction-reducer.test.js
+node tests/fake-agent-bridge.test.js
 tests/upstream-agent.test.sh
 
 if command -v omarchy >/dev/null 2>&1; then

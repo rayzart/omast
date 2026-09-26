@@ -22,6 +22,9 @@ All notable changes to Omast will be documented in this file.
 - Internal Phase 2 generation reducer and JSONL protocol fixtures with stale
   event, cancellation, retry, and malformed-stream coverage; not yet connected
   to the production UI.
+- Test-only Fake Agent bridge covering handshake, transport-token isolation,
+  stdout/exit ordering, bounded diagnostics, cancellation, and sticky terminal
+  outcomes.
 
 ## [0.1.0] - Unreleased
 

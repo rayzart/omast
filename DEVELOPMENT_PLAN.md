@@ -621,7 +621,10 @@ fire-and-forget 调用。
   entries，`appLibraryAvailable=false`，确认兼容路径仍是实际需要。代码复核随后
   补齐 `launcher.hides`、`Hidden`/`OnlyShowIn`/`NotShowIn` 过滤，并改用固定 argv
   的 `uwsm-app -- gtk-launch`。该修正版已同步到用户插件目录，但常驻实例没有被
-  hot reload 替换；完整 shell 重启因会话锁定被 Omarchy 安全门禁拒绝。
+  hot reload 替换；只读源码诊断确认 `reloadPlugins()` 会卸载实例，但 Omarchy
+  `4.0.4-1` 无法从 QML 调用 `QQmlEngine::clearComponentCache()`，相同 URL 会重新
+  命中旧编译缓存。现有 IPC 没有可靠的通用刷新入口，完整 shell 重启又因会话
+  锁定被 Omarchy 安全门禁拒绝；不得绕过保护直接 kill Quickshell。
 
 Phase 1 剩余人工验收：中文 IME 预编辑、应用实际启动、活动显示器，以及
 `Super+Space` 接入；解锁后还需完整重启 shell，复验最新隐藏规则修正版。实际
@@ -641,4 +644,21 @@ Phase 1 剩余人工验收：中文 IME 预编辑、应用实际启动、活动�
 - 新增 decoded-chunk JSONL parser/validator 与确定性 fixtures，覆盖中文、emoji、
   CRLF、半行缓存、错误行后恢复、取消、重试和 malformed event。
 - production 路径仍只调用 `omarchy agent prompt`；尚未提供的 structured stream
-  不会被伪装成现有能力。下一切片是测试专用 FakeBridge，不接真实模型或 UI。
+  不会被伪装成现有能力。
+
+### 14.8 Phase 2 P2.1b 测试桥
+
+已完成不接真实进程、模型或 production UI 的 `FakeAgentBridge`：
+
+- ready/capabilities 握手完成前拒绝请求；协议版本、重复握手和冲突能力均有
+  确定性行为，capabilities 会被深复制并冻结。
+- 每代 transport 使用单调递增 token；旧进程的 stdout、stderr、EOF 与 exit
+  回调全部忽略，不能污染 retry 或新窗口。
+- stdout EOF 与 process exit 分离建模，两种到达顺序结果一致；提前 clean EOF、
+  非零退出、显式 backend error 与本地取消分别收敛为稳定终态。
+- 完成/错误/取消终态具有黏性，每个 attempt 只发布一次 terminal notification；
+  malformed 行不会阻断同一 stream 后续有效事件。
+- stderr 诊断限制为 4096 字符；完整 smoke 已包含 FakeBridge 测试。
+
+P2.1 协议与竞态基础至此完成。下一最小节点是 P2.2a：仅用 fake stream 驱动
+Quick AI 视图模型/界面状态，真实 production 仍保持终端交接。

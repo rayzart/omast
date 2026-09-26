@@ -296,7 +296,7 @@ cancel/retry are race-safe, and all unsupported Agents visibly fall back to the
 terminal handoff. A styled fake stream or parsed terminal output does not meet
 this definition.
 
-## Completed minimum implementation slice
+## Completed minimum implementation slices
 
 P2.1a is implemented without changing the visible Phase 1 behavior:
 
@@ -309,8 +309,20 @@ P2.1a is implemented without changing the visible Phase 1 behavior:
 4. Keep `omarchy agent prompt` as the only production bridge and leave the
    response UI disabled until the fake bridge can drive it in tests.
 
-This slice establishes the protocol seam and race guarantees without implying
-that Omarchy already supports embedded streaming. The next minimum slice is
-P2.1b: a test-only `FakeBridge` that maps capability handshake, decoded chunks,
-transport exit, and cancellation into reducer events. Production remains on
-`omarchy agent prompt` until P2.0 defines a real structured backend.
+P2.1b is also complete as a test-only `FakeAgentBridge`:
+
+1. Require a versioned ready/capabilities handshake before starting an attempt.
+2. Tag every stdout, stderr, EOF, and exit callback with a monotonic transport
+   token so callbacks from a replaced process cannot mutate current state.
+3. Treat stdout EOF and process exit as independent callbacks and prove both
+   delivery orders converge identically.
+4. Map clean premature EOF, non-zero exit, local cancellation, explicit backend
+   errors, malformed lines, and late events into deterministic sticky outcomes.
+5. Freeze capability snapshots, bound stderr diagnostics, and publish one
+   terminal notification per attempt.
+
+These slices establish the protocol seam and race guarantees without implying
+that Omarchy already supports embedded streaming. The next minimum node is
+P2.2a: connect a fake-stream view model to the Quick AI surface behind a
+development-only path, while production remains on `omarchy agent prompt`
+until P2.0 defines a real structured backend.
