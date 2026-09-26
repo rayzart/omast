@@ -322,7 +322,21 @@ P2.1b is also complete as a test-only `FakeAgentBridge`:
    terminal notification per attempt.
 
 These slices establish the protocol seam and race guarantees without implying
-that Omarchy already supports embedded streaming. The next minimum node is
-P2.2a: connect a fake-stream view model to the Quick AI surface behind a
-development-only path, while production remains on `omarchy agent prompt`
-until P2.0 defines a real structured backend.
+that Omarchy already supports embedded streaming.
+
+P2.2a is complete as a pure JavaScript presentation seam:
+
+1. Map reducer generations to stable loading, streaming, complete, error, and
+   cancelled UI states without coupling rendering to transport events.
+2. Derive response text, error presentation, composer availability, Escape
+   behavior, capability-gated actions, and keyboard hints in one immutable
+   view state.
+3. Provide an explicitly stepped fake-stream controller that drives the
+   existing reducer and test bridge deterministically in Node tests.
+4. Leave `Omast.qml` unchanged, so the production Quick AI path still invokes
+   only `omarchy agent prompt` and cannot expose fake answers to users.
+
+The next minimum node is P2.2b: render this view state in an isolated,
+development-only QML preview and prove keyboard behavior there. Production
+must remain on `omarchy agent prompt` until P2.0 defines a real structured
+backend.

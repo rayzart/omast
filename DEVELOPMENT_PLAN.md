@@ -662,3 +662,18 @@ Phase 1 剩余人工验收：中文 IME 预编辑、应用实际启动、活动�
 
 P2.1 协议与竞态基础至此完成。下一最小节点是 P2.2a：仅用 fake stream 驱动
 Quick AI 视图模型/界面状态，真实 production 仍保持终端交接。
+
+### 14.9 Phase 2 P2.2a 视图模型
+
+已完成纯 JavaScript Quick AI presentation seam，未修改 production QML：
+
+- 将 reducer 的 generation 投影为 loading、streaming、complete、error 与
+  cancelled 状态，并统一生成响应文本、错误、composer 可用性、Escape 行为、
+  capability-gated actions 与键盘提示。
+- 新增 deterministic、显式逐步推进的 Node-only fake stream controller；测试
+  覆盖中文/emoji 增量、partial error、取消后的迟到 delta、retry 与 immutable
+  capabilities/steps。
+- smoke 增加静态门禁，禁止 `Omast.qml` 引用 `FakeAgentBridge`、
+  `QuickAIViewModel` 或尚不存在的 `omarchy agent stream`。
+- `Omast.qml` 未变，默认 Quick AI 仍只调用 `omarchy agent prompt`。下一最小
+  节点 P2.2b 才会在双重开发门禁后渲染 isolated fake preview。

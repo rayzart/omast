@@ -25,6 +25,9 @@ All notable changes to Omast will be documented in this file.
 - Test-only Fake Agent bridge covering handshake, transport-token isolation,
   stdout/exit ordering, bounded diagnostics, cancellation, and sticky terminal
   outcomes.
+- Pure Quick AI view-model mapping reducer state to loading, streaming,
+  complete, error, and cancelled presentation states, with capability-gated
+  actions, keyboard hints, and a deterministic test-only stream controller.
 
 ## [0.1.0] - Unreleased
 
