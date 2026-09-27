@@ -15,6 +15,7 @@ jq -e '
 ' manifest.json >/dev/null
 
 test -f Omast.qml
+test -f QuickAIPreview.qml
 test -f README.md
 test -f LICENSE
 
@@ -30,6 +31,11 @@ fi
 
 if rg -n 'FakeAgentBridge|QuickAIViewModel|omarchy agent stream' Omast.qml; then
   echo "test-only Quick AI transport leaked into production QML" >&2
+  exit 1
+fi
+
+if rg -n 'FakeAgentBridge|omarchy agent prompt|execDetached|Process[[:space:]]*\{' QuickAIPreview.qml; then
+  echo "development preview acquired a production transport or process" >&2
   exit 1
 fi
 
@@ -55,7 +61,7 @@ if [[ -n "$qml_linter" && -n "${OMARCHY_PATH:-}" && -d "$OMARCHY_PATH/shell" ]];
   mkdir "$lint_root/qs"
   ln -s "$OMARCHY_PATH/shell/Commons" "$lint_root/qs/Commons"
   ln -s "$OMARCHY_PATH/shell/Ui" "$lint_root/qs/Ui"
-  "$qml_linter" -I "$lint_root" Omast.qml
+  "$qml_linter" -I "$lint_root" Omast.qml QuickAIPreview.qml
   unlink "$lint_root/qs/Commons"
   unlink "$lint_root/qs/Ui"
   rmdir "$lint_root/qs" "$lint_root"

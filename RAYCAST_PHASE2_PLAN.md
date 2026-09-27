@@ -336,7 +336,15 @@ P2.2a is complete as a pure JavaScript presentation seam:
 4. Leave `Omast.qml` unchanged, so the production Quick AI path still invokes
    only `omarchy agent prompt` and cannot expose fake answers to users.
 
-The next minimum node is P2.2b: render this view state in an isolated,
-development-only QML preview and prove keyboard behavior there. Production
-must remain on `omarchy agent prompt` until P2.0 defines a real structured
-backend.
+P2.2b now has an isolated QML preview. It is loaded only when the shell process
+has `OMAST_DEV_PREVIEW=1` and the opening IPC payload contains both
+`{"mode":"quick_ai","devPreview":true}`. The preview renders the P2.2a view
+state, advances a deterministic simulated answer, and supports Escape to stop
+then close and R to retry. It never starts an Agent or process. Without both
+gates, production still calls `omarchy agent prompt`.
+
+Static QML lint, the gate model tests, and smoke pass. Keyboard, IME, layout,
+and focus behavior still require a live Omarchy Shell session; the shell was
+not running in the current development environment. This node is not the real
+streaming bridge. P2.0 and P2.4 remain required before embedded answers can
+ship as a normal user feature.

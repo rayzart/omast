@@ -140,6 +140,20 @@ The script runs model tests, manifest checks, the installed official Omarchy
 validator, and QML lint when those local tools are available. On this Omarchy
 installation, `qmllint` is located at `/usr/lib/qt6/bin/qmllint`.
 
+An isolated simulated Quick AI preview is available for interface development.
+It loads only when the `omarchy-shell` process has `OMAST_DEV_PREVIEW=1` in its
+environment **and** this explicit IPC payload opens the plugin:
+
+```bash
+omarchy-shell shell summon io.github.rayzart.omast '{"mode":"quick_ai","devPreview":true}'
+```
+
+The preview is visibly marked as simulated and never calls an Agent. Without
+both conditions, Quick AI continues to hand prompts to the default Agent
+terminal. Escape stops the simulated response first, then closes on a later
+press; `R` retries after it stops or finishes. Leaving for Launcher mode exits
+the preview.
+
 See [`DEVELOPMENT_PLAN.md`](DEVELOPMENT_PLAN.md) for the implementation and
 release plan, and [`SECURITY.md`](SECURITY.md) for the trust boundary.
 

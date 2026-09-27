@@ -6,6 +6,11 @@ function normalizeMode(value) {
   return value === "quick_ai" ? "quick_ai" : "launcher"
 }
 
+function previewAllowed(environmentValue, payload) {
+  return environmentValue === "1" && !!payload
+    && payload.devPreview === true && payload.mode === "quick_ai"
+}
+
 function moveSelection(currentIndex, delta, itemCount) {
   var count = Math.max(0, Number(itemCount) || 0)
   if (count === 0) return -1
@@ -127,6 +132,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     isBlank: isBlank,
     normalizeMode: normalizeMode,
+    previewAllowed: previewAllowed,
     moveSelection: moveSelection,
     inputSnapshot: inputSnapshot,
     appSearchText: appSearchText,

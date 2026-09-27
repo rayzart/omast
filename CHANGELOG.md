@@ -28,6 +28,8 @@ All notable changes to Omast will be documented in this file.
 - Pure Quick AI view-model mapping reducer state to loading, streaming,
   complete, error, and cancelled presentation states, with capability-gated
   actions, keyboard hints, and a deterministic test-only stream controller.
+- Isolated, visibly simulated Quick AI QML preview behind a shell environment
+  flag and explicit IPC opt-in; production Agent handoff remains unchanged.
 
 ## [0.1.0] - Unreleased
 

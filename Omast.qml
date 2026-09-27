@@ -18,6 +18,7 @@ Item {
   property var manifest: null
 
   property bool opened: false
+  property bool previewActive: false
   property string interactionMode: "launcher"
   property int selectedIndex: -1
   property bool submitting: false
@@ -69,6 +70,9 @@ Item {
     try { payload = JSON.parse(payloadJson || "{}") } catch (e) { payload = ({}) }
 
     root.openGeneration += 1
+    if (!wasOpen)
+      root.previewActive = OmastModel.previewAllowed(
+        Quickshell.env("OMAST_DEV_PREVIEW"), payload)
     root.opened = true
     root.errorText = ""
 
@@ -89,6 +93,8 @@ Item {
   function close() {
     root.openGeneration += 1
     root.opened = false
+    if (previewLoader.item) previewLoader.item.reset()
+    root.previewActive = false
     root.interactionMode = "launcher"
     root.selectedIndex = -1
     root.submitting = false
@@ -123,7 +129,10 @@ Item {
       rawAppCount: root.appLibrary
         ? root.appLibrary.sortedEntries("").length
         : (DesktopEntries.applications.values || []).length,
-      busy: root.busy
+      busy: root.busy,
+      previewActive: root.previewActive,
+      previewStatus: root.previewActive && previewLoader.item
+        ? previewLoader.item.viewState.status : ""
     })
   }
 
@@ -169,6 +178,10 @@ Item {
 
     var snapshot = root.captureInput()
     root.preservedInput = snapshot
+    if (root.previewActive && nextMode !== "quick_ai") {
+      if (previewLoader.item) previewLoader.item.reset()
+      root.previewActive = false
+    }
     root.interactionMode = nextMode
     root.errorText = ""
     if (nextMode === "launcher") root.refreshLauncherResults()
@@ -243,6 +256,12 @@ Item {
   function submitQuickAI() {
     if (!root.quickAI || root.busy || OmastModel.isBlank(universalInput.text)) return
 
+    if (root.previewActive) {
+      if (previewLoader.item && previewLoader.item.viewState.composerEnabled)
+        previewLoader.item.start(universalInput.text)
+      return
+    }
+
     root.errorText = ""
     root.stderrText = ""
     root.submitting = true
@@ -255,6 +274,11 @@ Item {
   function activateCurrent() {
     if (root.quickAI) root.submitQuickAI()
     else root.activateResult(root.selectedIndex)
+  }
+
+  function handleEscape() {
+    if (root.previewActive && previewLoader.item && previewLoader.item.cancel()) return
+    root.dismiss()
   }
 
   function showLaunchFailure() {
@@ -379,7 +403,16 @@ Item {
     Shortcut {
       sequence: "Escape"
       context: Qt.WindowShortcut
-      onActivated: root.dismiss()
+      autoRepeat: false
+      onActivated: root.handleEscape()
+    }
+
+    Shortcut {
+      sequence: "R"
+      context: Qt.WindowShortcut
+      autoRepeat: false
+      enabled: root.previewActive && previewLoader.item && previewLoader.item.canRetry
+      onActivated: previewLoader.item.retry()
     }
 
     Rectangle {
@@ -455,7 +488,8 @@ Item {
         TextField {
           id: universalInput
           width: parent.width
-          enabled: !root.busy
+          enabled: !root.busy && (!root.previewActive || !previewLoader.item
+            || previewLoader.item.viewState.composerEnabled)
           placeholderText: root.quickAI
             ? "Ask AI…" : "Search installed apps…"
           foreground: root.foreground
@@ -614,9 +648,18 @@ Item {
           font.pixelSize: Style.font.caption
         }
 
+        Loader {
+          id: previewLoader
+          width: parent.width
+          active: root.previewActive
+          visible: active
+          source: "QuickAIPreview.qml"
+          height: item ? item.implicitHeight : 0
+        }
+
         Row {
           width: parent.width
-          visible: root.quickAI
+          visible: root.quickAI && !root.previewActive
           spacing: Style.spacing.sm
 
           Text {

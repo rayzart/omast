@@ -677,3 +677,15 @@ Quick AI 视图模型/界面状态，真实 production 仍保持终端交接。
   `QuickAIViewModel` 或尚不存在的 `omarchy agent stream`。
 - `Omast.qml` 未变，默认 Quick AI 仍只调用 `omarchy agent prompt`。下一最小
   节点 P2.2b 才会在双重开发门禁后渲染 isolated fake preview。
+
+### 14.10 Phase 2 P2.2b 隔离预览
+
+- 新增 `QuickAIPreview.qml`，只在 Shell 进程环境 `OMAST_DEV_PREVIEW=1` 且
+  本次 IPC payload 同时为 `mode: "quick_ai"`、`devPreview: true` 时加载。
+- 预览明确标注模拟数据；使用 P2.2a 视图映射展示 loading、streaming、
+  complete、error、cancelled，Escape 先停止再关闭，R 可重试。离开 Quick AI
+  模式或关闭浮层会销毁预览状态。
+- 默认路径继续调用 `omarchy agent prompt`，预览不启动进程。静态 QML、
+  双门禁模型测试和完整 smoke 已通过。
+- 当前环境没有运行中的 `omarchy-shell`/Hyprland socket，桌面键盘、IME、
+  焦点和视觉验收待真实会话完成；这不是生产流式回答能力。
